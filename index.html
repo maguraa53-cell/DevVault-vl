@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevVault | By HexaCode Systems</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .search-gradient { background: linear-gradient(90deg, #1e293b, #0f172a); }
+    </style>
+</head>
+<body class="bg-[#0b0e14] text-gray-200 min-h-screen font-sans flex flex-col">
+
+    <nav class="border-b border-gray-800 bg-[#0b0e14]/90 p-4 sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold text-blue-500 italic tracking-tighter">DevVault</h1>
+            <div class="flex gap-6 text-sm font-bold">
+                <button onclick="showTab('explore')" class="hover:text-blue-400 transition">Explorar</button>
+                <button onclick="showTab('publish')" class="hover:text-blue-400 transition">Publicar</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto py-8 px-4 flex-grow">
+        
+        <section id="explore" class="tab-content active">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                <h2 class="text-2xl font-bold">Explorar Projetos</h2>
+                
+                <div class="relative w-full md:w-96">
+                    <input type="text" id="search-input" onkeyup="filtrarProjetos()" placeholder="Pesquisar apps ou categorias..." 
+                           class="w-full bg-gray-900 border border-gray-700 p-3 pl-10 rounded-2xl outline-none focus:border-blue-500 transition shadow-inner">
+                    <span class="absolute left-3 top-3.5 text-gray-500">🔍</span>
+                </div>
+            </div>
+
+            <div id="lista-apps" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+        </section>
+
+        <section id="publish" class="tab-content">
+            <div class="max-w-lg mx-auto glass p-8 rounded-3xl border border-blue-900/20">
+                <h2 class="text-xl font-bold mb-6 text-white border-l-4 border-blue-600 pl-3">Novo Lançamento</h2>
+                <form id="form-dev" class="space-y-4">
+                    <input type="text" id="nome" placeholder="Nome do Aplicativo" class="w-full bg-gray-900 border border-gray-800 p-3 rounded-xl outline-none focus:ring-1 focus:ring-blue-500" required>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <select id="cat" class="bg-gray-900 border border-gray-800 p-3 rounded-xl outline-none">
+                            <option value="Windows">Windows</option>
+                            <option value="Android">Android</option>
+                            <option value="Linux">Linux</option>
+                        </select>
+                        <select id="rating_init" class="bg-gray-900 border border-gray-800 p-3 rounded-xl outline-none text-yellow-500">
+                            <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+                            <option value="4">⭐⭐⭐⭐ (4)</option>
+                        </select>
+                    </div>
+
+                    <input type="url" id="link" placeholder="Link Direto (Drive/GitHub)" class="w-full bg-gray-900 border border-gray-800 p-3 rounded-xl outline-none" required>
+                    <input type="url" id="img" placeholder="URL da Imagem de Capa" class="w-full bg-gray-900 border border-gray-800 p-3 rounded-xl outline-none">
+                    <textarea id="desc" placeholder="Descreva as funções do app..." class="w-full bg-gray-900 border border-gray-800 p-3 rounded-xl h-24 outline-none"></textarea>
+
+                    <div class="bg-blue-900/10 p-4 rounded-xl border border-blue-900/20">
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" id="termos" class="mt-1" required>
+                            <span class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-tight">
+                                Aceito os termos de responsabilidade. O arquivo é seguro e de minha autoria/distribuição permitida.
+                            </span>
+                        </label>
+                    </div>
+
+                    <button type="submit" id="btn-pub" class="w-full bg-blue-600 font-bold py-4 rounded-2xl hover:bg-blue-500 transition shadow-lg shadow-blue-900/40">Lançar App</button>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-gray-800 p-6 mt-10 text-center bg-[#0b0e14]">
+        <p class="text-xs text-gray-500 font-medium tracking-widest uppercase">
+            Plataforma <span class="text-blue-500">DevVault</span> &copy; 2026
+        </p>
+        <p class="text-[10px] text-gray-600 mt-1">
+            Desenvolvido por <span class="font-bold text-gray-400">HexaCode Systems</span>
+        </p>
+    </footer>
+
+    <script>
+        const URL_API = "https://69a3b89a611ecf5bfc235915.mockapi.io/V1/Apps";
+        let todosOsProjetos = [];
+
+        function showTab(id) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'explore') carregarProjetos();
+        }
+
+        // BUSCA / SEARCH
+        function filtrarProjetos() {
+            const termo = document.getElementById('search-input').value.toLowerCase();
+            const filtrados = todosOsProjetos.filter(app => 
+                app.nome.toLowerCase().includes(termo) || 
+                app.cat.toLowerCase().includes(termo)
+            );
+            renderizarCards(filtrados);
+        }
+
+        async function carregarProjetos() {
+            const container = document.getElementById('lista-apps');
+            container.innerHTML = "<p class='text-gray-600 animate-pulse'>Sincronizando com HexaCode Systems...</p>";
+            
+            try {
+                const res = await fetch(URL_API);
+                todosOsProjetos = await res.json();
+                renderizarCards(todosOsProjetos.reverse());
+            } catch (e) {
+                container.innerHTML = "<p class='text-red-500'>Erro na conexão com o servidor.</p>";
+            }
+        }
+
+        function renderizarCards(lista) {
+            const container = document.getElementById('lista-apps');
+            container.innerHTML = "";
+            
+            lista.forEach(app => {
+                // Gera números aleatórios para simular downloads/votos se não existirem
+                const downloads = Math.floor(Math.random() * 500) + 1;
+                const votos = Math.floor(Math.random() * 50) + 1;
+
+                container.innerHTML += `
+                    <div class="glass p-5 rounded-3xl border border-gray-800 hover:scale-[1.02] transition-transform duration-300">
+                        <div class="h-44 bg-gray-900 rounded-2xl mb-4 overflow-hidden relative">
+                            <img src="${app.img || 'https://via.placeholder.com/400x200/111/333?text=DevVault'}" class="w-full h-full object-cover">
+                            <span class="absolute top-3 right-3 px-3 py-1 bg-black/60 backdrop-blur-md rounded-full text-[10px] font-black text-blue-400 border border-blue-500/20">${app.cat}</span>
+                        </div>
+                        
+                        <h3 class="text-lg font-bold text-white mb-1">${app.nome}</h3>
+                        <p class="text-gray-500 text-xs mb-4 line-clamp-2 italic leading-relaxed">"${app.desc || 'Explorar este incrível projeto.'}"</p>
+                        
+                        <div class="flex items-center justify-between py-3 border-y border-gray-800/50 mb-4 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                            <div class="flex items-center gap-1">
+                                <span class="text-blue-500">⬇</span> ${downloads} Baixaram
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span class="text-yellow-500">⭐</span> ${votos} Avaliaram
+                            </div>
+                        </div>
+
+                        <a href="${app.link}" target="_blank" class="block w-full text-center bg-blue-600 text-white py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white hover:text-black transition-all">Obter Aplicativo</a>
+                    </div>
+                `;
+            });
+        }
+
+        document.getElementById('form-dev').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-pub');
+            btn.innerText = "Processando...";
+            btn.disabled = true;
+
+            const novoApp = {
+                nome: document.getElementById('nome').value,
+                cat: document.getElementById('cat').value,
+                link: document.getElementById('link').value,
+                img: document.getElementById('img').value,
+                desc: document.getElementById('desc').value,
+                rating: document.getElementById('rating_init').value
+            };
+
+            await fetch(URL_API, {
+                method: 'POST',
+                headers: {'content-type':'application/json'},
+                body: JSON.stringify(novoApp)
+            });
+
+            alert("🚀 App publicado com sucesso na HexaCode!");
+            e.target.reset();
+            showTab('explore');
+        });
+
+        carregarProjetos();
+    </script>
+</body>
+</html>
+
